@@ -1,0 +1,77 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cadastre-gis"
+version = "1.0.0"
+description = "Advanced Cadastral & Land Registry GIS Intelligence & Econometrics Platform"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "CadastreGIS Development Team"}
+]
+keywords = [
+    "gis",
+    "cadastre",
+    "geospatial",
+    "wfs",
+    "geoserver",
+    "balkans",
+    "epsg-31276",
+    "wgs84",
+    "inequality",
+    "gini",
+    "land-registry",
+    "leaflet",
+    "kml"
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "pyproj>=3.6.0",
+    "shapely>=2.0.0",
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+    "flask>=3.0.0",
+    "requests>=2.31.0",
+    "beautifulsoup4>=4.12.0",
+    "click>=8.1.0",
+    "rich>=13.0.0",
+    "python-dotenv>=1.0.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.1.0",
+    "mypy>=1.6.0"
+]
+
+[project.scripts]
+cadastre-gis = "cadastre_gis.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["cadastre_gis*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
