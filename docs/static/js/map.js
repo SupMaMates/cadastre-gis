@@ -12,6 +12,16 @@ let selectedParcelFeature = null;
 let currentChoropleth = 'default';
 let currentTheme = localStorage.getItem('cadastre_theme') || 'dark';
 
+// CARTO Configuration (carto.com)
+// Supports passing ?carto_key=... in URL, localStorage, or setting below
+const urlParams = new URLSearchParams(window.location.search);
+let CARTO_API_KEY = urlParams.get('carto_key') || localStorage.getItem('carto_api_key') || '';
+if (urlParams.get('carto_key')) {
+  localStorage.setItem('carto_api_key', CARTO_API_KEY);
+}
+let CARTO_USER = urlParams.get('carto_user') || localStorage.getItem('carto_user') || '';
+let CARTO_MAP_ID = urlParams.get('carto_map') || localStorage.getItem('carto_map') || '';
+
 // Basemap tile layers
 let baseLayers = {};
 
@@ -83,21 +93,40 @@ function initMap() {
   L.control.zoom({ position: 'bottomright' }).addTo(map);
   L.control.scale({ metric: true, imperial: false, position: 'bottomleft' }).addTo(map);
 
-  // Basemap tile definitions
+  const cartoParam = CARTO_API_KEY ? `?api_key=${encodeURIComponent(CARTO_API_KEY)}` : '';
+
+  // Basemap tile definitions (CartoDB / Esri / OSM)
   baseLayers = {
     'Satelit (Esri World Imagery)': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       attribution: 'Esri, Maxar, Earthstar Geographics'
     }),
-    'Tamna karta (CartoDB)': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap, &copy; CARTO'
+    'Tamna karta (CartoDB)': L.tileLayer(`https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png${cartoParam}`, {
+      attribution: '&copy; OpenStreetMap, &copy; CARTO',
+      subdomains: 'abcd',
+      maxZoom: 20
     }),
-    'Svijetla karta (CartoDB)': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap, &copy; CARTO'
+    'Svijetla karta (CartoDB)': L.tileLayer(`https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png${cartoParam}`, {
+      attribution: '&copy; OpenStreetMap, &copy; CARTO',
+      subdomains: 'abcd',
+      maxZoom: 20
+    }),
+    'Voyager šarena karta (CartoDB)': L.tileLayer(`https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png${cartoParam}`, {
+      attribution: '&copy; OpenStreetMap, &copy; CARTO',
+      subdomains: 'abcd',
+      maxZoom: 20
     }),
     'OpenStreetMap': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     })
   };
+
+  // Optional custom CARTO private map layer if user and map_id provided
+  if (CARTO_USER && CARTO_MAP_ID) {
+    baseLayers['Moj CARTO sloj'] = L.tileLayer(
+      `https://gusc.cartocdn.com/${encodeURIComponent(CARTO_USER)}/api/v1/map/${encodeURIComponent(CARTO_MAP_ID)}/{z}/{x}/{y}.png${cartoParam}`,
+      { attribution: '&copy; CARTO', maxZoom: 20 }
+    );
+  }
 
   // Add default basemap based on theme
   if (currentTheme === 'dark') {
