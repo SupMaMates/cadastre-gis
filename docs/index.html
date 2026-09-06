@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="sr" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CadastreGIS • Donji Žabar (KO 57062)</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- App CSS -->
+  <link rel="stylesheet" href="static/css/app.css">
+</head>
+<body>
+  <div id="app" class="app-shell">
+    
+    <!-- Top Navigation Bar -->
+    <header class="app-header">
+      <div class="brand-group">
+        <div class="brand-icon">
+          <i data-lucide="map-pin"></i>
+        </div>
+        <div>
+          <div class="brand-title">CadastreGIS</div>
+          <div class="brand-subtitle">Доњи Жабар • K.O. 57062</div>
+        </div>
+        <span class="badge badge-success pulse">Live GeoServer & e-Katastar</span>
+      </div>
+
+      <nav class="nav-tabs">
+        <button id="tab-map" class="nav-tab active" onclick="switchView('map')">
+          <i data-lucide="map"></i>
+          <span>Karta Parcela</span>
+        </button>
+        <button id="tab-dashboard" class="nav-tab" onclick="switchView('dashboard')">
+          <i data-lucide="bar-chart-3"></i>
+          <span>Analitika & God-Mode</span>
+        </button>
+      </nav>
+
+      <div class="header-actions">
+        <button class="btn btn-secondary btn-sm" onclick="exportData('geojson')" title="Preuzmi cjelokupan GeoJSON">
+          <i data-lucide="download"></i>
+          <span>GeoJSON</span>
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="exportData('csv')" title="Preuzmi CSV">
+          <i data-lucide="file-spreadsheet"></i>
+          <span>CSV</span>
+        </button>
+        <button id="theme-toggle" class="btn btn-icon" onclick="toggleTheme()" title="Promijeni temu">
+          <i data-lucide="sun" id="theme-icon"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="app-body">
+      
+      <!-- ================= MAP VIEW ================= -->
+      <div id="view-map" class="view-container active">
+        
+        <!-- Sidebar Controls Drawer -->
+        <aside id="map-sidebar" class="map-sidebar">
+          <div class="sidebar-header">
+            <h3><i data-lucide="sliders"></i> Filteri & Slojevi</h3>
+            <button class="btn-icon sm" onclick="toggleSidebar()" title="Sakrij panel">
+              <i data-lucide="chevron-left"></i>
+            </button>
+          </div>
+
+          <!-- Search Input -->
+          <div class="search-box">
+            <i data-lucide="search" class="search-icon"></i>
+            <input type="text" id="parcel-search-input" placeholder="Broj parcele (npr. 1376/2) ili vlasnik..." autocomplete="off">
+            <button id="clear-search-btn" class="clear-btn" onclick="clearSearch()" style="display:none;">&times;</button>
+          </div>
+          <div id="search-results" class="search-results-dropdown" style="display:none;"></div>
+
+          <!-- Choropleth Styling Selector -->
+          <div class="filter-group">
+            <label class="filter-label"><i data-lucide="palette"></i> Tematski prikaz (Choropleth)</label>
+            <select id="choropleth-mode" class="form-select" onchange="updateMapStyle()">
+              <option value="default">Standardne granice (Katastarski obrisi)</option>
+              <option value="usage">Način korišćenja zemljišta (Poljoprivreda/Stambeno)</option>
+              <option value="fragmentation">Stepen fragmentacije (Broj suvlasnika)</option>
+              <option value="ownership_type">Tip vlasništva (Privatno vs Pravno/Opština/RS)</option>
+              <option value="area">Toplotna karta površine parcela</option>
+            </select>
+          </div>
+
+          <!-- Land Use Category Filter -->
+          <div class="filter-group">
+            <label class="filter-label"><i data-lucide="layers"></i> Filtriraj po namjeni</label>
+            <select id="filter-usage" class="form-select" onchange="applyFilters()">
+              <option value="all">Sve kategorije namjene</option>
+              <option value="agriculture">Poljoprivredno (Njive, Voćnjaci, Livade)</option>
+              <option value="residential">Stambeno (Kuće, Zgrade, Objekti)</option>
+              <option value="yard">Dvorišta i okućnice</option>
+              <option value="forest">Šume i zabrani</option>
+              <option value="infrastructure">Infrastruktura (Putevi, Kanali, Voda)</option>
+              <option value="other">Ostalo / Neplodno</option>
+            </select>
+          </div>
+
+          <!-- Quick Toggle Checkboxes -->
+          <div class="filter-group checkboxes">
+            <label class="checkbox-label">
+              <input type="checkbox" id="filter-coowned" onchange="applyFilters()">
+              <span>Samo parcele sa više suvlasnika</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="filter-anomalies" onchange="applyFilters()">
+              <span>Samo parcele sa anomalijom zbira udjela (≠ 1)</span>
+            </label>
+          </div>
+
+          <!-- Reset Filter Button -->
+          <button class="btn btn-outline btn-block" onclick="resetFilters()">
+            <i data-lucide="rotate-ccw"></i> Resetuj sve filtere
+          </button>
+
+          <!-- Dynamic Filter Stats Footer -->
+          <div class="sidebar-stats">
+            <div class="stat-badge">
+              <span class="stat-num" id="visible-parcel-count">4,172</span>
+              <span class="stat-text">Prikazano parcela</span>
+            </div>
+            <div class="stat-badge">
+              <span class="stat-num" id="visible-parcel-area">2,773.4</span>
+              <span class="stat-text">Ukupno hektara</span>
+            </div>
+          </div>
+
+          <!-- Legend Container -->
+          <div id="map-legend" class="map-legend"></div>
+        </aside>
+
+        <!-- Center Map Container -->
+        <div class="map-wrapper">
+          <div id="leaflet-map" class="map-container"></div>
+          
+          <!-- Floating Map Controls -->
+          <div class="map-floating-controls">
+            <button class="map-floating-btn" onclick="fitMunicipalityBounds()" title="Centriraj cijelu opštinu">
+              <i data-lucide="maximize"></i>
+            </button>
+            <button class="map-floating-btn" onclick="toggleSidebar()" title="Prikaži/sakrij filtere">
+              <i data-lucide="panel-left-open"></i>
+            </button>
+          </div>
+
+          <!-- Quick Hover Tooltip Indicator -->
+          <div id="map-hover-card" class="map-hover-card" style="display:none;"></div>
+        </div>
+
+        <!-- Slide-over Parcel Inspector Drawer -->
+        <aside id="parcel-inspector" class="parcel-inspector">
+          <div class="inspector-header">
+            <div class="inspector-title-group">
+              <span class="badge badge-primary" id="insp-ko-badge">Доњи Жабар</span>
+              <h2 id="insp-parcel-title">Parcela 1376/2</h2>
+            </div>
+            <button class="btn-icon" onclick="closeInspector()" title="Zatvori">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+
+          <div class="inspector-body">
+            
+            <!-- Key Metrics Grid -->
+            <div class="metrics-grid">
+              <div class="metric-card">
+                <div class="metric-label">Površina</div>
+                <div class="metric-val" id="insp-area">1,199 m²</div>
+                <div class="metric-sub" id="insp-area-ha">0.1199 ha</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Broj lista (PL)</div>
+                <div class="metric-val" id="insp-pl">615</div>
+                <div class="metric-sub">Posjedovni list</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Suvlasnici</div>
+                <div class="metric-val" id="insp-owners-count">1</div>
+                <div class="metric-sub" id="insp-eff-owners">N_eff = 1.0</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Ažurirano</div>
+                <div class="metric-val" id="insp-updated">18.04.2026</div>
+                <div class="metric-sub">e-Katastar RGURS</div>
+              </div>
+            </div>
+
+            <!-- Action Buttons Bar -->
+            <div class="inspector-actions">
+              <a id="btn-download-kml" href="#" class="btn btn-primary btn-sm" download>
+                <i data-lucide="globe"></i> Preuzmi KML (Google Earth)
+              </a>
+              <button class="btn btn-secondary btn-sm" onclick="copyGpsCoordinates()">
+                <i data-lucide="copy"></i> Kopiraj GPS
+              </button>
+              <a id="btn-google-maps" href="#" target="_blank" class="btn btn-secondary btn-sm">
+                <i data-lucide="external-link"></i> Google Maps
+              </a>
+            </div>
+
+            <!-- Owners Section -->
+            <div class="inspector-section">
+              <div class="section-title">
+                <i data-lucide="users"></i>
+                <span>Nosioci prava na parceli (<span id="insp-owners-badge">1</span>)</span>
+              </div>
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Ime i prezime (otac)</th>
+                      <th>Udio</th>
+                      <th class="right">Površina (m²)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="insp-owners-tbody">
+                    <!-- Populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Land Parts Section -->
+            <div class="inspector-section">
+              <div class="section-title">
+                <i data-lucide="sprout"></i>
+                <span>Dijelovi parcele i kultura (<span id="insp-parts-badge">5</span>)</span>
+              </div>
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Način korišćenja</th>
+                      <th>Klasa</th>
+                      <th class="right">Površina (m²)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="insp-parts-tbody">
+                    <!-- Populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </aside>
+
+      </div>
+
+      <!-- ================= DASHBOARD VIEW ================= -->
+      <div id="view-dashboard" class="view-container">
+        <div class="dashboard-scrollable">
+          
+          <div class="dashboard-header">
+            <div>
+              <h1 class="dashboard-title">Katastarska Analitika &amp; Ekonometrija</h1>
+              <p class="dashboard-desc">Sveobuhvatna analiza raspodjele zemljišta, fragmentacije parcela, vlasničke nejednakosti i rodne strukture za K.O. Donji Žabar.</p>
+            </div>
+            <div class="dashboard-filters">
+              <span class="badge badge-accent">Top-20 Rang liste</span>
+            </div>
+          </div>
+
+          <!-- Top Row KPI Cards -->
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-header">
+                <span class="kpi-label">Džini Koeficijent Nejednakosti</span>
+                <i data-lucide="trending-up" class="kpi-icon danger"></i>
+              </div>
+              <div class="kpi-value" id="kpi-gini">0.8142</div>
+              <div class="kpi-footer danger">Izuzetno visoka koncentracija privatnog posjeda</div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-header">
+                <span class="kpi-label">Palma Omjer (Top 10% / Dno 40%)</span>
+                <i data-lucide="pie-chart" class="kpi-icon warning"></i>
+              </div>
+              <div class="kpi-value" id="kpi-palma">12.4x</div>
+              <div class="kpi-footer">Top 10% posjeduje preko 58% privatnog zemljišta</div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-header">
+                <span class="kpi-label">Ukupno Parcela</span>
+                <i data-lucide="layers" class="kpi-icon primary"></i>
+              </div>
+              <div class="kpi-value" id="kpi-parcels">4,172</div>
+              <div class="kpi-footer" id="kpi-area-total">2,773.4 ha površina katastarske opštine</div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-header">
+                <span class="kpi-label">Jedinstvenih Vlasnika</span>
+                <i data-lucide="users" class="kpi-icon success"></i>
+              </div>
+              <div class="kpi-value" id="kpi-owners">926</div>
+              <div class="kpi-footer" id="kpi-median-wealth">Medijana: 11,450 m² po vlasniku</div>
+            </div>
+          </div>
+
+          <!-- Charts Row 1: Lorenz Curve & Top Owners -->
+          <div class="charts-grid two-cols">
+            <div class="chart-card">
+              <div class="chart-header">
+                <div class="chart-title"><i data-lucide="activity"></i> Lorencova Kriva Raspodjele Zemljišta</div>
+                <div class="chart-subtitle">Stvarna kriva nejednakosti (Gini = 0.81) naspram linije apsolutne jednakosti</div>
+              </div>
+              <div class="chart-box">
+                <canvas id="lorenzChart"></canvas>
+              </div>
+            </div>
+
+            <div class="chart-card">
+              <div class="chart-header">
+                <div class="chart-title"><i data-lucide="award"></i> Najveći Posjednici Zemljišta (Top 10)</div>
+                <div class="chart-subtitle">Ukupna uknjižena površina u metrima kvadratnim (m²)</div>
+              </div>
+              <div class="chart-box">
+                <canvas id="topOwnersChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts Row 2: Land Use, Surnames, Fragmentation -->
+          <div class="charts-grid three-cols">
+            <div class="chart-card">
+              <div class="chart-header">
+                <div class="chart-title"><i data-lucide="pie-chart"></i> Struktura Namjene Zemljišta</div>
+                <div class="chart-subtitle">Udio poljoprivrednog, stambenog i šumskog fonda</div>
+              </div>
+              <div class="chart-box">
+                <canvas id="landUseChart"></canvas>
+              </div>
+            </div>
+
+            <div class="chart-card">
+              <div class="chart-header">
+                <div class="chart-title"><i data-lucide="shield"></i> Moć Porodičnih Prezimena (Klanovi)</div>
+                <div class="chart-subtitle">Ukupan zemljišni posjed po prezimenima (m²)</div>
+              </div>
+              <div class="chart-box">
+                <canvas id="clanWealthChart"></canvas>
+              </div>
+            </div>
+
+            <div class="chart-card">
+              <div class="chart-header">
+                <div class="chart-title"><i data-lucide="git-fork"></i> Suvlasništvo &amp; Fragmentacija</div>
+                <div class="chart-subtitle">1 vlasnik vs 2-3 suvlasnika vs 4+ ("nasljedni čvorovi")</div>
+              </div>
+              <div class="chart-box">
+                <canvas id="fragmentationChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabbed Tables Section -->
+          <div class="tables-section">
+            <div class="table-tabs">
+              <button class="table-tab active" onclick="switchTableTab('owners-table')">Top 20 Vlasnika</button>
+              <button class="table-tab" onclick="switchTableTab('clans-table')">Porodični Klanovi &amp; Loze</button>
+              <button class="table-tab" onclick="switchTableTab('micro-table')">Nasljedni Labirint (Mikro-udjeli)</button>
+              <button class="table-tab" onclick="switchTableTab('anomalies-table')">Anomalije Zbira Udjela</button>
+            </div>
+
+            <!-- Table 1: Top Owners -->
+            <div id="tab-content-owners-table" class="table-tab-content active">
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Rang</th>
+                      <th>Ime / Naziv nosioca prava</th>
+                      <th>Tip</th>
+                      <th class="right">Ukupna površina (m²)</th>
+                      <th class="right">Površina (ha)</th>
+                      <th class="right">Udio u opštini (%)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dashboard-owners-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Table 2: Clans -->
+            <div id="tab-content-clans-table" class="table-tab-content">
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Prezime</th>
+                      <th>Frekvencija u opštini</th>
+                      <th class="right">Ukupno posjeda (m²)</th>
+                      <th class="right">Ukupno posjeda (ha)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dashboard-clans-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Table 3: Micro-shares -->
+            <div id="tab-content-micro-table" class="table-tab-content">
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Vlasnik</th>
+                      <th>Parcela</th>
+                      <th>Razlomak udjela</th>
+                      <th>Udio u procentima</th>
+                      <th class="right">Efektivna površina (m²)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dashboard-micro-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Table 4: Anomalies -->
+            <div id="tab-content-anomalies-table" class="table-tab-content">
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Parcela</th>
+                      <th>Broj uknjiženih vlasnika</th>
+                      <th>Zbir udjela</th>
+                      <th>Odstupanje od 1.0</th>
+                      <th>Status rizika</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dashboard-anomalies-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Global Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <!-- App JS -->
+  <script src="static/js/map.js"></script>
+  <script src="static/js/dashboard.js"></script>
+  <script>
+    // Initialize Lucide icons on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>

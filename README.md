@@ -1,10 +1,13 @@
 # CadastreGIS • Advanced Cadastral & Land Registry Intelligence Platform
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/)
+[![Live Demo](https://img.shields.io/badge/demo-live%20on%20GitHub%20Pages-success.svg?style=flat&logo=github)](https://supmamates.github.io/cadastre-gis/)
 [![Tests](https://img.shields.io/badge/tests-23%20passed%20%28100%25%29-brightgreen.svg)](https://pytest.org/)
 [![Linter: Ruff](https://img.shields.io/badge/linter-ruff%20clean-black.svg)](https://github.com/astral-sh/ruff)
 [![GeoJSON](https://img.shields.io/badge/RFC_7946-GeoJSON%20Compliant-orange.svg)](https://datatracker.ietf.org/doc/html/rfc7946)
 [![License: MIT](https://img.shields.io/badge/license-MIT-purple.svg)](LICENSE)
+
+🌐 **Live Interactive Web GIS & Analytics Demo**: [https://supmamates.github.io/cadastre-gis/](https://supmamates.github.io/cadastre-gis/)
 
 An enterprise-grade, high-precision GIS, econometric analysis, and web mapping platform designed for cadastral municipalities across the Balkans, Republika Srpska, Bosnia and Herzegovina, and Serbia (starting with **Donji Žabar, K.O. 57062**).
 
@@ -191,6 +194,34 @@ cadastre-gis info
 | `GET /api/parcels/<id>/kml` | XML | Downloads styled KML 2.2 polygon for Google Earth |
 | `GET /api/analytics` | JSON | Econometric KPIs, Gini, Palma, Lorenz points, top clans |
 | `GET /api/export` | File | Export filtered parcels as GeoJSON (`?format=geojson`) or CSV (`?format=csv`) |
+
+---
+
+## 🌐 Free Live Hosting & Deployment
+
+The platform is designed with dual-mode execution (Dynamic Python Flask server OR zero-server static CDN deployment).
+
+### 1. GitHub Pages (Free & Instant, Zero Server Maintenance)
+The static web application bundle is pre-compiled under `docs/`. The repository includes an automated GitHub Actions deployment workflow (`.github/workflows/deploy.yml`).
+1. In repository **Settings** → **Pages**:
+2. Under **Build and deployment** → **Source**, select **GitHub Actions** (or Deploy from branch `main`, folder `/docs`).
+3. Your Web GIS is immediately live globally at:
+   ```
+   https://<your-username>.github.io/cadastre-gis/
+   ```
+All vector map layers, choropleths, parcel search, dynamic Chart.js econometrics, browser-side KML generators, and CSV/GeoJSON exports run 100% client-side with 0 server costs and 0 cold starts!
+
+### 2. Render.com (Free Web Service - Dynamic Flask API)
+The project includes a turnkey `render.yaml` and `Procfile`.
+1. Fork or push to GitHub.
+2. Sign in to [Render](https://render.com/) and click **New** → **Blueprint**.
+3. Select this repository. Render will automatically detect `render.yaml` and launch the dynamic Python service on the free tier.
+
+### 3. Vercel (Free Static Hosting)
+The project includes `vercel.json` configured for the `docs` directory:
+```bash
+npx vercel --prod
+```
 
 ---
 

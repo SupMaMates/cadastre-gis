@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: cadastre-gis
+    env: python
+    buildCommand: pip install -r requirements.txt && pip install -e .
+    startCommand: cadastre-gis web --host 0.0.0.0 --port $PORT
+    plan: free
+    autoDeploy: true
+    envVars:
+      - key: CADASTRE_CITY_ID
+        value: "35"
+      - key: CADASTRE_CITY_NAME
+        value: "Доњи Жабар"
+      - key: CADASTRE_KO_ID
+        value: "57062"
