@@ -222,8 +222,17 @@ def create_app(dataset_path: Path | None = None) -> Flask:
         top_n = request.args.get("top_n", 20, type=int)
         include_entities = request.args.get("include_entities", "true").lower() in ("true", "1")
 
-        if store.cached_report and top_n == 20 and include_entities:
-            return jsonify(store.cached_report)
+        if store.cached_report and include_entities:
+            rep = store.cached_report.copy()
+            if top_n != 20:
+                rep["top_owners"] = dict(list(rep.get("top_owners", {}).items())[:top_n])
+                clans = rep.get("clans", {}).copy()
+                clans["surname_wealth"] = dict(list(clans.get("surname_wealth", {}).items())[:top_n])
+                rep["clans"] = clans
+                rep["most_fragmented_parcels"] = rep.get("most_fragmented_parcels", [])[:top_n]
+                rep["micro_shares"] = rep.get("micro_shares", [])[:top_n]
+                rep["share_anomalies"] = rep.get("share_anomalies", [])[:top_n]
+            return jsonify(rep)
 
         if store.analytics_engine:
             report = store.analytics_engine.generate_report(top_n=top_n, include_entities=include_entities)
